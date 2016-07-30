@@ -164,8 +164,8 @@ Adafruit_VS1053_FilePlayer::Adafruit_VS1053_FilePlayer(
 boolean Adafruit_VS1053_FilePlayer::begin(void) {
   uint8_t v  = Adafruit_VS1053::begin();   
 
-  //dumpRegs();
-  //Serial.print("Version = "); Serial.println(v);
+  dumpRegs();
+  Serial.print("Version = "); Serial.println(v);
   return (v == 4);
 }
 
@@ -175,6 +175,7 @@ boolean Adafruit_VS1053_FilePlayer::playFullFile(const char *trackname) {
 
   while (playingMusic) {
     // twiddle thumbs
+
     feedBuffer();
   }
   // music file finished!
@@ -230,10 +231,19 @@ boolean Adafruit_VS1053_FilePlayer::startPlayingFile(const char *trackname) {
   // wait till its ready for data
   while (! readyForData() );
 
-
+  // ylh -- this is apparently done only once
+  // ylh -- this is apparently done only once
+  unsigned long last_checked = millis();
   // fill it up!
-  while (playingMusic && readyForData())
+  while (playingMusic && readyForData()) {
+        //ylh
+    if( (millis() - last_checked) > 1000) {
+        dumpRegs();
+        last_checked = millis();
+    }
+      Serial.print('x');
     feedBuffer();
+  }
 
 //  Serial.println("Ready");
 
@@ -273,13 +283,22 @@ void Adafruit_VS1053_FilePlayer::feedBuffer(void) {
     running = 0;
     return;
   }
-
+  // ylh
+  unsigned long last_checked = millis();
   // Feed the hungry buffer! :)
   while (readyForData()) {
     //UDR0 = '.';
-
+    //ylh
+    if( (millis() - last_checked) > 1000) {
+        //dumpRegs();
+        Serial.print(digitalRead(_dreq));
+        last_checked = millis();
+    }
+//      Serial.print(digitalRead(_dreq));
+      
     // Read some audio data from the SD card file
-    int bytesread = currentTrack.read(mp3buffer, VS1053_DATABUFFERLEN);
+    // ylh:
+    int bytesread = currentTrack.read(mp3buffer, 512 ); //VS1053_DATABUFFERLEN);
 
     if (bytesread == 0) {
       // must be at the end of the file, wrap it up!
@@ -288,7 +307,27 @@ void Adafruit_VS1053_FilePlayer::feedBuffer(void) {
       running = 0;
       return;
     }
-    playData(mp3buffer, bytesread);
+    //playData(mp3buffer, bytesread);
+    
+    //*
+    //ylh 
+    int toSend;
+    if (bytesread > 32) toSend = 32;
+    else toSend = bytesread;
+      
+    int offset = 0;
+      
+    while( toSend > 0 ) {
+        while( !readyForData() ); 
+        
+        playData(mp3buffer+offset, toSend);
+        offset += toSend;
+        bytesread -= toSend;
+        
+        if (bytesread > 32) toSend = 32;
+        else toSend = bytesread;
+    }
+    //*/
   }
   running = 0;
   return;
@@ -424,6 +463,8 @@ uint16_t Adafruit_VS1053::loadPlugin(char *plugname) {
 
 
 boolean Adafruit_VS1053::readyForData(void) {
+  if(digitalRead(_dreq) == 0 ) Serial.print('L');
+  else Serial.print('.');
   return digitalRead(_dreq);
 }
 
@@ -517,6 +558,8 @@ void Adafruit_VS1053::dumpRegs(void) {
   Serial.print("Stat = 0x"); Serial.println(sciRead(VS1053_REG_STATUS), HEX);
   Serial.print("ClkF = 0x"); Serial.println(sciRead(VS1053_REG_CLOCKF), HEX);
   Serial.print("Vol. = 0x"); Serial.println(sciRead(VS1053_REG_VOLUME), HEX);
+  Serial.print("DREQ pin = "); Serial.println(_dreq);  
+  Serial.print("dreq val = "); Serial.println(digitalRead(_dreq));
 }
 
 

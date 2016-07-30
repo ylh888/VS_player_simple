@@ -117,7 +117,7 @@ void loop() {
       if (! musicPlayer.paused()) {
         Serial.println("Paused");
         musicPlayer.pausePlaying(true);
-      } else {
+      } else {  
         Serial.println("Resumed");
         musicPlayer.pausePlaying(false);
       }

@@ -117,7 +117,7 @@ class Adafruit_VS1053 {
   uint16_t recordedWordsWaiting(void);
   uint16_t recordedReadWord(void);
 
-  uint8_t mp3buffer[VS1053_DATABUFFERLEN];
+  uint8_t mp3buffer[512]; // ylh VS1053_DATABUFFERLEN];
 
  protected:
   uint8_t  _dreq;
